@@ -1,4 +1,4 @@
-(defproject webmine "1.0.0-SNAPSHOT"
+(defproject webmine "0.1.0"
   :description "Web data mining library.
 
                Provides support for mining websites and newsfeeds."
