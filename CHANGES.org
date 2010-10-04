@@ -1,3 +1,8 @@
+* 0.1.1
+Released on <2010-10-04 Mon>.
+
+Minor fix to webmine.feeds, removed unneeded functions.
+
 * 0.1.0
 Released on <2010-10-03 Sun>.
 
