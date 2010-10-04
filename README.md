@@ -10,6 +10,6 @@ Coming soon...
 
 ## Installation
 
-Soon, with leiningen:
-    ["webmine" "0.1.0"]
+For leiningen:
+    ["webmine" "0.1.1"]
 
