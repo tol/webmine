@@ -87,13 +87,6 @@
        (.setType "text/html")
        (.setValue  (:des entry)))))))
 
-(defn entries-from-maps [entries]
-  (let [entries* (ArrayList.)
-	_ (doall (for [entry entries]
-		   (.add entries*
-			 (map-to-entry entry))))]
-    entries*))
-
 (defn feed-home [source]
  (if-let [synd-feed (parse-feed source)]
     (.getLink synd-feed)))
@@ -225,8 +218,3 @@ May not be a good idea for blogs that have many useful feeds, for example, for a
 (defn merge-outlinks [outlinks-map]
   (into #{} (concat (second (:entries outlinks-map))
 		    (second (:homepage outlinks-map)))))
-
-(defn- into-arraylist [e]
-  (let [a (ArrayList.)
-	_ (doall (map #(.add a %) e))]
-    a))
