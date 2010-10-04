@@ -1,17 +1,15 @@
-# mining
+# webmine
 
-FIXME: write description
+A web mining toolkit for Clojure.
+
+Provides support for mining websites and news feeds.
 
 ## Usage
 
-FIXME: write
+Coming soon...
 
 ## Installation
 
-FIXME: write
+Soon, with leiningen:
+    ["webmine" "0.1.0"]
 
-## License
-
-Copyright (C) 2010 FIXME
-
-Distributed under the Eclipse Public License, the same as Clojure.
