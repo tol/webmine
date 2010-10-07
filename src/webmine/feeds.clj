@@ -17,12 +17,12 @@
 (defn parse-feed
   "takes an InputSream, Url, or File." 
   [source]
-  (try 
-  (.build (SyndFeedInput.) (XmlReader. source))
-   (catch com.sun.syndication.io.ParsingFeedException _ _
-	  nil)
-   (catch java.io.IOException _ _
-	  nil)))
+  (try    
+    (.build (SyndFeedInput.) (XmlReader. source))
+    (catch com.sun.syndication.io.ParsingFeedException _ _
+           nil)
+    (catch java.io.IOException _ _
+           nil)))
 
 (defn feed? [source]
       (and source (parse-feed source)))
