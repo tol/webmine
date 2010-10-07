@@ -9,6 +9,6 @@
                  [xalan "2.7.1"]
                  [rome "0.9"]
                  [clj-http "0.1.0-SNAPSHOT"]
-                 [work "0.0.1"]]
+                 [work "0.0.1-SNAPSHOT"]]
   :dev-dependencies [[swank-clojure "1.2.1"]]
   :repositories  {"apache" "https://repository.apache.org/content/repositories/releases/"})
