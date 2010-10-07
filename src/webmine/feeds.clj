@@ -53,16 +53,6 @@
 (defn links-from-entry [e]
  (url-seq (body e)))
 
-(defn all-entries [urls]
-  (filter identity
-	  (apply merge
-		 (work/map-work
-		  #(hash-map %
-			     (work/map-work
-			      entry-as-map
-			      (entries (url %)) 20))
-		  urls 20))))
-
 (defn text-content [v]
 (doto (SyndContentImpl.)
 		       (.setType com.sun.syndication.feed.atom.Content/TEXT)
@@ -169,9 +159,6 @@ May not be a good idea for blogs that have many useful feeds, for example, for a
 	      u (or (:xmlUrl a) (:htmlUrl a))]
 	:when (url u)]
     u))
-
-(defn blogroll-entries [opml]
-(all-entries (blogroll opml)))
 
 (defn home-feed-outlinks
   "given the url of a blog's homepage, find the outlinks to feeds from the homepage."
