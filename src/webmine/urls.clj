@@ -118,3 +118,9 @@
    get the first member of each vector, whihc is the url."
   [t]
   (urls (map first (re-seq url-pattern t))))
+
+(defn remove-urls
+  [t]
+  (.replaceAll
+   (re-matcher url-pattern t)
+   ""))
