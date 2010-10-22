@@ -56,11 +56,13 @@
 (defn text-node? [node]
   (and node (= (.getNodeType node) Node/TEXT_NODE)))
 
-;;TODO: use maybes for this sort of thing.
-(defn href [n]
+(defn attr [n a]
   (if-let [attrs (.getAttributes n)]
-    (if-let [the-href (.getNamedItem attrs "href")]
+    (if-let [the-href (.getNamedItem attrs a)]
       (.getValue the-href))))
+
+(defn href [n] (attr n "href"))
+(defn src [n] (attr n "src"))
 
 (defn extract-text [n]
   (if (not (text-node? n))
@@ -83,9 +85,9 @@
   "gets the divs in a dom.
    (count (divs (dom (:body (fetch (url \"http://ftalphaville.ft.com/\")))))) -> 199"
   [d]
-  (elements "div"))
+  (elements d "div"))
 
-(defn anchors [d] (elements "a"))
+(defn anchors [d] (elements d "a"))
 
 (defn head [d]
   (.item

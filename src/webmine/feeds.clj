@@ -160,11 +160,11 @@ May not be a good idea for blogs that have many useful feeds, for example, for a
 	:when (url u)]
     u))
 
-(defn home-feed-outlinks
+(defn find-feed-outlinks
   "given the url of a blog's homepage, find the outlinks to feeds from the homepage."
-[u]
+  [b u]
   (let [outs (into #{}
-		   (find-outlinks (body-str u) u))
+		   (find-outlinks b u))
 	feeds (filter
 	       identity
 	       (canonical-feeds outs))
@@ -173,25 +173,16 @@ May not be a good idea for blogs that have many useful feeds, for example, for a
 				   feeds))]
     (seq ex-feeds)))
 
-;;;map of feed home -> rss url
-;;    (zipmap (map #(feed-home (url %)) ex-feeds) ex-feeds)))
+(defn home-feed-outlinks
+[u]
+  (find-feed-outlinks (body-str u) u))
 
 (defn entry-feed-outlinks
   "given the url of a blog's feed, find the outlinks to feeds from all the entries currently in this blog's feed."
-[u]
+  [u]
   (let [home (feed-home (url u))
-	outs (into #{}
-		   (flatten
-		    (map
-		     #(find-outlinks (body %) home)
-		     (entries (url u)))))
-	feeds (filter
-	       identity
-	       (canonical-feeds outs))
-	;;we need to filter same host feeds again, as they can get filtered from outlinsk but then be found again when extracting canonical feeds.
-	ex-feeds (into #{} (filter #(external? (url u) (url %))
-				   feeds))]
-    (seq ex-feeds)))
+	uber-b (apply str (entries (url u)))]
+    (find-feed-outlinks uber-b u)))
 
 (defn feed-outlinks
   "given the url of a blog's homepage or rss feed, find the outlinks to feeds from both the homepage, and all the entries currently in this blog's feed."
