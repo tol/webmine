@@ -56,16 +56,24 @@
 (defn text-node? [node]
   (and node (= (.getNodeType node) Node/TEXT_NODE)))
 
+(defn script-node? [node]
+  (and node (= (.getNodeName node) "script")))
+
 (defn attr [n a]
   (if-let [attrs (.getAttributes n)]
-    (if-let [the-href (.getNamedItem attrs a)]
-      (.getValue the-href))))
+    (if-let [att (.getNamedItem attrs a)]
+      (.getValue att))))
 
 (defn href [n] (attr n "href"))
 (defn src [n] (attr n "src"))
+(defn node-type [n] (attr n "type"))
 
+
+;;TODO: script thing still not working?
 (defn extract-text [n]
-  (if (not (text-node? n))
+  (if (or
+       (not (text-node? n))
+       (script-node? n))
     ""
     (.getNodeValue n)))
 
@@ -97,6 +105,13 @@
 (defn hrefs [es]
   (filter (comp not nil?) (map (comp url href) es)))
 
+(defn do-children [n f]
+  (if (not (.hasChildNodes n))
+    []
+    (let [children (.getChildNodes n)]
+      (doall (for [i (range 0 (.getLength children))]
+	       (f (.item children i)))))))
+
 (defn walk-dom
   "recursively walk the dom.
   combine: result of visiting a single node & rest -> combines them as
@@ -106,11 +121,7 @@
   [d visit combine]
   (let [extractor (fn extract [n]
                     (combine (visit n)
-                             (if (not (.hasChildNodes n))
-                               []
-                               (let [children (.getChildNodes n)]
-                                 (doall (for [i (range 0 (.getLength children))]
-                                   (extract (.item children i))))))))]
+			     (do-children n extract)))]
     (extractor d)))
 
 (defn text-from-dom
