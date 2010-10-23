@@ -53,10 +53,11 @@
 ;;(big-img (imgs (dom (:body (cl/get "http://gigaom.com/2010/10/22/whos-driving-mobile-payments-hint-some-are-barely-old-enough-to-drive/")))))
 
 (defn fetch-img [u]
-  (ImageIO/read (url u)))
+  (if-let [ur (url u)]
+    (ImageIO/read ur)))
 
 (defn img-size [u]
-  (let [i (fetch-img u)]
+  (if-let [i (fetch-img u)]
     [(.getHeight i)
      (.getWidth i)]))
 
