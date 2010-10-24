@@ -57,7 +57,7 @@
   (and node (= (.getNodeType node) Node/TEXT_NODE)))
 
 (defn script-node? [node]
-  (and node (= (.getNodeName node) "script")))
+  (and node (= (.getTagName node) "script")))
 
 (defn attr [n a]
   (if-let [attrs (.getAttributes n)]
@@ -71,9 +71,7 @@
 
 ;;TODO: script thing still not working?
 (defn extract-text [n]
-  (if (or
-       (not (text-node? n))
-       (script-node? n))
+  (if (not (text-node? n))
     ""
     (.getNodeValue n)))
 
@@ -86,8 +84,26 @@
    (count (divs (dom (:body (fetch (url \"http://ftalphaville.ft.com/\")))))) -> 199"
   [d #^String t]
   (let [shitty-data-structure (.getElementsByTagName d t)]
-    (for [i (range 0 (.getLength shitty-data-structure))]
-      (.item shitty-data-structure i))))
+    (filter identity
+	    (for [i (range 0 (.getLength shitty-data-structure))]
+	      (.item shitty-data-structure i)))))
+
+(defn strip-from-dom
+  [d es]
+  (doseq [e es]
+    (.removeChild (.getParentNode e) e))
+  (.normalize d)
+  d)
+
+(defn strip-tags [d & tags]
+  (if (or (not tags)
+	  (empty? tags))
+    d
+    (recur (strip-from-dom d (elements d (first tags)))
+	   (rest tags))))
+
+(defn strip-non-content [d]
+  (strip-tags d "script" "style"))
 
 (defn divs
   "gets the divs in a dom.
@@ -129,13 +145,19 @@
    inspired by: http://www.prasannatech.net/2009/02/convert-html-text-parser-java-api.html"
   [d]
   (walk-dom
-    d
-    extract-text
-    (fn [head tail]
-      (let [results (cons head (flatten tail))
-            buffer  (StringBuffer.)]
-        (doall (map #(.append buffer %) results))
-        (str buffer)))))
+   d
+   extract-text
+   (fn [head tail]
+     (let [results (cons head (flatten tail))
+	   buffer  (StringBuffer.)]
+       (doall (map #(.append buffer %) results))
+       (str buffer)))))
+
+;;TODO: WTF is up with the required calling of strip-non-content twice?
+;;something about the side effects happening in the stip tags or stip from dom fns?
+(defn clean-text [d]
+  (text-from-dom (strip-non-content
+		  (strip-non-content d))))
 
 ;;(hrefs (elements (head d) "link"))
 ;;(links-from-dom (head d))
