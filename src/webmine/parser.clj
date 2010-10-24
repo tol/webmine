@@ -55,19 +55,24 @@
 
 (defn text-node? [node]
   (and node (= (.getNodeType node) Node/TEXT_NODE)))
-
-(defn script-node? [node]
-  (and node (= (.getTagName node) "script")))
-
+        
 (defn attr [n a]
   (if-let [attrs (.getAttributes n)]
     (if-let [att (.getNamedItem attrs a)]
       (.getValue att))))
+        
+(defn attr-map 
+  "returns node attributes as map of keyword attribute keys to str value"
+  [n]
+  (when-let [attrs (.getAttributes n)]
+       (into {}
+          (for [i (range (.getLength attrs))
+                :let [item (bean (.item attrs i))]]
+            [(-> item :name keyword) (:textContent item)]))))      
 
 (defn href [n] (attr n "href"))
 (defn src [n] (attr n "src"))
 (defn node-type [n] (attr n "type"))
-
 
 ;;TODO: script thing still not working?
 (defn extract-text [n]
