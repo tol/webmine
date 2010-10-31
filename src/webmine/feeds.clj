@@ -48,10 +48,10 @@
       :link  (xml-zip/xml1-> root :channel :link xml-zip/text)
       :entries
       (doall
-       (for [n (xml-zip/xml-> root zip-filter/descendants
+       (for [n (xml-zip/xml-> root 
 			      :channel :item zip/node)
 	     :let [entry (into {}
-			       (filter (fn [[k v]] v)
+			       (filter second
 				       (item-node-to-entry n)))]]
 	 entry))})
     (catch Exception _ nil)))
