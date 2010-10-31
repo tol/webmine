@@ -5,7 +5,11 @@
         webmine.core
         webmine.parser
         webmine.urls)
-  (:require [work.core :as work])
+  (:use [clojure.java.io :only [input-stream]])
+  (:require [work.core :as work]
+	    [clojure.zip :as zip]
+	    [clojure.contrib.zip-filter :as zip-filter]
+	    [clojure.contrib.zip-filter.xml :as xml-zip])  
   (:import [com.sun.syndication.feed.synd
             SyndFeedImpl SyndEntryImpl SyndContentImpl]
            [com.sun.syndication.io
@@ -14,49 +18,63 @@
            java.util.ArrayList
            java.io.InputStream))
 
-(defn parse-feed
-  "takes an InputSream, Url, or File." 
+
+(defn- item-node-to-entry [item]
+  (let [item-root (zip/xml-zip item)
+	get-text (fn [k] (xml-zip/xml1-> item-root k xml-zip/text))]
+    {:title (get-text :title)
+     :link (get-text :link)
+     :content  (apply max-key count
+		      (map get-text [:content :description :content:encoded]))
+     :des (first (filter identity
+		  (map get-text [:description :content :content:encoded])))
+     :date (first (for [k [:pubDate :date :updatedDate]
+			  :let [s (get-text k)]
+			  :when k] s))
+     :author (get-text :author)     
+     }))
+
+
+(defn parse-feed [source]
+  "returns map representing feed. Supports keys
+  :title Name of feed
+  :des Description of feed
+  :link link to feed
+  :entries seq of entries, see doc below for entries"
+  (try
+    (when-let [root (-> source input-stream parse zip/xml-zip)]
+     {:title (xml-zip/xml1-> root :channel :title xml-zip/text)
+      :des   (xml-zip/xml1-> root :channel :description xml-zip/text)
+      :link  (xml-zip/xml1-> root :channel :link xml-zip/text)
+      :entries
+      (doall
+       (for [n (xml-zip/xml-> root zip-filter/descendants
+			      :channel :item zip/node)
+	     :let [entry (into {}
+			       (filter (fn [[k v]] v)
+				       (item-node-to-entry n)))]]
+	 entry))})
+    (catch Exception _ nil)))
+
+(defn entries
+  "return seq of entries from rss feed source (must be File or URL).
+  Each entry is a map with string values
+  :title entry title
+  :des  descritpion
+  :date String of date
+  :author author string
+  :content Content of entry (or :description if not content)
+  :link Link to content. "
   [source]
-  (try    
-    (.build (SyndFeedInput.) (XmlReader. source))
-    (catch com.sun.syndication.io.ParsingFeedException _ _
-           nil)
-    (catch java.io.IOException _ _
-           nil)))
+  (-> source parse-feed  :entries))
 
-(defn feed? [source]
-      (and source (parse-feed source)))
-
-(defn entries [source]
-  (if-let [synd-feed (parse-feed source)]
-    (seq (.getEntries synd-feed))))
-
-(defn body [e]
-  (let [d (.getDescription e)
-	c (first (seq (.getContents e)))]
-    (cond (not (or d c)) ""
-	  (not d) (.getValue c)
-	  (not c) (.getValue d)
-	  :else (max-by count
-			[(.getValue d) (.getValue c)]))))
-
-(defn entry-as-map [e]
-   (into {} (map #(if (nil? (second %)) [(first %) ""] %)
-   {:date (str (.getPublishedDate e))
-    :author (.getAuthor e)
-    :title (.getTitle e)
-    :link (.getLink e)
-    :des (let [d (body e)]
-	   (if (empty? d) d
-	       (text-from-dom (dom d))))})))
+(defn feed? [item]
+  (and item
+       (let [feed (parse-feed item)]
+	 (:entries feed))))
 
 (defn links-from-entry [e]
- (url-seq (body e)))
-
-(defn text-content [v]
-(doto (SyndContentImpl.)
-		       (.setType com.sun.syndication.feed.atom.Content/TEXT)
-		       (.setValue v)))
+ (-> e :content url-seq))
 
 (defn map-to-entry [entry]
   (let [content-keys (difference
