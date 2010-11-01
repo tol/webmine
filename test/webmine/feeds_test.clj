@@ -11,13 +11,13 @@
   (is (not (rss-suffix? "http://www.foo.com/feed.html"))))
 
 (deftest find-rss-feeds
-  (is (= ["http://www.huffingtonpost.com/feeds/original_posts/index.xml"
-	  "http://feeds.huffingtonpost.com/FeaturedPosts"
-	  "http://feeds.huffingtonpost.com/huffingtonpost/raw_feed"
-	  "http://feeds.huffingtonpost.com/huffingtonpost/TheBlog"
-	  "http://feeds.huffingtonpost.com/huffingtonpost/LatestNews"
-	  "http://www.huffingtonpost.com/wires/full_index.rdf"]
-	 (host-rss-feeds (url "http://www.huffingtonpost.com")))))
+  (is (= (set ["http://www.huffingtonpost.com/feeds/original_posts/index.xml"
+               "http://feeds.huffingtonpost.com/FeaturedPosts"
+               "http://feeds.huffingtonpost.com/huffingtonpost/raw_feed"
+               "http://feeds.huffingtonpost.com/huffingtonpost/TheBlog"
+               "http://feeds.huffingtonpost.com/huffingtonpost/LatestNews"
+               "http://www.huffingtonpost.com/wires/full_index.rdf"])
+         (set (host-rss-feeds (url "http://www.huffingtonpost.com"))))))
 
 (deftest canonical-rss-feed
   (is (= ["http://feeds.huffingtonpost.com/FeaturedPosts"]
