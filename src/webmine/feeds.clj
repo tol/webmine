@@ -4,12 +4,13 @@
         clojure.contrib.java-utils
         webmine.core
         webmine.parser
-        webmine.urls)
-  (:use [clojure.java.io :only [input-stream]])
+        webmine.urls
+        [clojure.java.io :only [input-stream]])
   (:require [work.core :as work]
-	    [clojure.zip :as zip]
-	    [clojure.contrib.zip-filter :as zip-filter]
-	    [clojure.contrib.zip-filter.xml :as xml-zip])  
+            [clojure.zip :as zip]
+            [clojure.contrib.zip-filter :as zip-filter]
+            [clojure.contrib.zip-filter.xml :as xml-zip]
+            [clj-time.format :as time-fmt])  
   (:import [com.sun.syndication.feed.synd
             SyndFeedImpl SyndEntryImpl SyndContentImpl]
            [com.sun.syndication.io
@@ -29,11 +30,10 @@
      :des (first (filter identity
 		  (map get-text [:description :content :content:encoded])))
      :date (first (for [k [:pubDate :date :updatedDate]
-			  :let [s (get-text k)]
-			  :when k] s))
-     :author (get-text :author)     
-     }))
-
+                        :let [s (get-text k)]
+                        :when k] (time-fmt/unparse (time-fmt/formatters :date-time)
+                                                   s)))
+     :author (get-text :author)}))
 
 (defn- str-to-url [s]
   (if (string? s) (java.net.URL. s) s))
