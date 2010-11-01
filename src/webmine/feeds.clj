@@ -8,42 +8,54 @@
         [clojure.java.io :only [input-stream]])
   (:require [work.core :as work]
             [clojure.zip :as zip]
+            [clojure.contrib.logging :as log]
             [clojure.contrib.zip-filter :as zip-filter]
             [clojure.contrib.zip-filter.xml :as xml-zip]
-            [clj-time.format :as time-fmt])  
+            [clj-time.format :as time-fmt]
+            [clj-time.coerce :as time-coerce])  
   (:import [com.sun.syndication.feed.synd
             SyndFeedImpl SyndEntryImpl SyndContentImpl]
            [com.sun.syndication.io
             SyndFeedInput SyndFeedOutput XmlReader]
            java.util.Date
            java.util.ArrayList
-           java.io.InputStream))
+           java.io.InputStream
+           [java.text
+            SimpleDateFormat ParsePosition]))
 
+(def rfc822-rss-formats
+     [(SimpleDateFormat. "E, dd MMM yy HH:mm:ss Z")
+      (SimpleDateFormat. "E, dd MMM yyyy HH:mm:ss Z")])
 
 (defn- compact-date-time [s]
-  (let [date-time
-	(first
-	 (filter identity
-	  (map
-	   (fn [f]
-	     (try
-	       (time-fmt/parse f s)
-	       (catch Exception _ nil)))
-	   (vals time-fmt/formatters))))]
+  (let [date-time (first
+                   (filter identity
+                           (concat (map (fn [f]
+                                          (try
+                                            (time-fmt/parse f s)
+                                            (catch Exception _ nil)))
+                                        (vals time-fmt/formatters))
+                                   (map (fn [sdf]
+                                          (try (when-let [d (.parse sdf s (ParsePosition. 0))]
+                                                 (time-coerce/from-date d))
+                                               (catch Exception _ nil)))
+                                        rfc822-rss-formats))))]
     (time-fmt/unparse (time-fmt/formatters :date-time) date-time)))
 
 (defn- item-node-to-entry [item]
   (let [item-root (zip/xml-zip item)
-	get-text (fn [k] (xml-zip/xml1-> item-root k xml-zip/text))]
+        get-text (fn [k] (xml-zip/xml1-> item-root k xml-zip/text))]
     {:title (get-text :title)
      :link (get-text :link)
      :content  (apply max-key count
 		      (map get-text [:content :description :content:encoded]))
      :des (first (filter identity
 		  (map get-text [:description :content :content:encoded])))
-     :date (first (for [k [:pubDate :date :updatedDate]
-                        :let [s (get-text k)]
-                        :when k] (compact-date-time s)))
+     :date (try (first (for [k [:pubDate :date :updatedDate]
+                             :let [s (get-text k)]
+                             :when k] (if s (compact-date-time s)
+                                          nil)))
+                (catch Exception e (log/error e)))
      :author (get-text :author)}))
 
 (defn- str-to-url [s]
