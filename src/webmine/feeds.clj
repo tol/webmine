@@ -35,6 +35,9 @@
      }))
 
 
+(defn- str-to-url [s]
+  (if (string? s) (java.net.URL. s) s))
+
 (defn parse-feed [source]
   "returns map representing feed. Supports keys
   :title Name of feed
@@ -42,7 +45,7 @@
   :link link to feed
   :entries seq of entries, see doc below for entries"
   (try
-    (when-let [root (-> source input-stream parse zip/xml-zip)]
+    (when-let [root (-> source str-to-url input-stream parse zip/xml-zip)]
      {:title (xml-zip/xml1-> root :channel :title xml-zip/text)
       :des   (xml-zip/xml1-> root :channel :description xml-zip/text)
       :link  (xml-zip/xml1-> root :channel :link xml-zip/text)
@@ -214,3 +217,8 @@ May not be a good idea for blogs that have many useful feeds, for example, for a
 (defn merge-outlinks [outlinks-map]
   (into #{} (concat (second (:entries outlinks-map))
 		    (second (:homepage outlinks-map)))))
+
+
+(comment
+  (entries "http://www.rollingstone.com/siteServices/rss/allNews")
+)
