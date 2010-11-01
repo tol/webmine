@@ -20,6 +20,18 @@
            java.io.InputStream))
 
 
+(defn- compact-date-time [s]
+  (let [date-time
+	(first
+	 (filter identity
+	  (map
+	   (fn [f]
+	     (try
+	       (time-fmt/parse f s)
+	       (catch Exception _ nil)))
+	   (vals time-fmt/formatters))))]
+    (time-fmt/unparse (time-fmt/formatters :date-time) date-time)))
+
 (defn- item-node-to-entry [item]
   (let [item-root (zip/xml-zip item)
 	get-text (fn [k] (xml-zip/xml1-> item-root k xml-zip/text))]
@@ -31,8 +43,7 @@
 		  (map get-text [:description :content :content:encoded])))
      :date (first (for [k [:pubDate :date :updatedDate]
                         :let [s (get-text k)]
-                        :when k] (time-fmt/unparse (time-fmt/formatters :date-time)
-                                                   s)))
+                        :when k] (compact-date-time s)))
      :author (get-text :author)}))
 
 (defn- str-to-url [s]
@@ -221,4 +232,7 @@ May not be a good idea for blogs that have many useful feeds, for example, for a
 
 (comment
   (entries "http://www.rollingstone.com/siteServices/rss/allNews")
+  (entries (java.net.URL. "http://www.rollingstone.com/siteServices/rss/allNews"))
 )
+
+
