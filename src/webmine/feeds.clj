@@ -4,10 +4,12 @@
         clojure.contrib.java-utils
         webmine.core
         webmine.parser
-        webmine.urls)
+        webmine.urls
+        [clojure.java.io :only [input-stream]])
   (:require [work.core :as work]
-            [clj-time.format :as time-fmt]
-            [clj-time.coerce :as time-coerce])
+	    [clojure.zip :as zip]
+	    [clojure.contrib.zip-filter :as zip-filter]
+	    [clojure.contrib.zip-filter.xml :as xml-zip])  
   (:import [com.sun.syndication.feed.synd
             SyndFeedImpl SyndEntryImpl SyndContentImpl]
            [com.sun.syndication.io
@@ -16,50 +18,63 @@
            java.util.ArrayList
            java.io.InputStream))
 
-(defn parse-feed
-  "takes an InputSream, Url, or File." 
+
+(defn- item-node-to-entry [item]
+  (let [item-root (zip/xml-zip item)
+	get-text (fn [k] (xml-zip/xml1-> item-root k xml-zip/text))]
+    {:title (get-text :title)
+     :link (get-text :link)
+     :content  (apply max-key count
+		      (map get-text [:content :description :content:encoded]))
+     :des (first (filter identity
+		  (map get-text [:description :content :content:encoded])))
+     :date (first (for [k [:pubDate :date :updatedDate]
+                        :let [s (get-text k)]
+                        :when k] (time-fmt/unparse (time-fmt/formatters :date-time)
+                                                   s)))
+     :author (get-text :author)}))
+
+
+(defn parse-feed [source]
+  "returns map representing feed. Supports keys
+  :title Name of feed
+  :des Description of feed
+  :link link to feed
+  :entries seq of entries, see doc below for entries"
+  (try
+    (when-let [root (-> source input-stream parse zip/xml-zip)]
+     {:title (xml-zip/xml1-> root :channel :title xml-zip/text)
+      :des   (xml-zip/xml1-> root :channel :description xml-zip/text)
+      :link  (xml-zip/xml1-> root :channel :link xml-zip/text)
+      :entries
+      (doall
+       (for [n (xml-zip/xml-> root 
+			      :channel :item zip/node)
+	     :let [entry (into {}
+			       (filter second
+				       (item-node-to-entry n)))]]
+	 entry))})
+    (catch Exception _ nil)))
+
+(defn entries
+  "return seq of entries from rss feed source (must be File or URL).
+  Each entry is a map with string values
+  :title entry title
+  :des  descritpion
+  :date String of date
+  :author author string
+  :content Content of entry (or :description if not content)
+  :link Link to content. "
   [source]
-  (try    
-    (.build (SyndFeedInput.) (XmlReader. source))
-    (catch com.sun.syndication.io.ParsingFeedException _ _
-           nil)
-    (catch java.io.IOException _ _
-           nil)))
+  (-> source parse-feed  :entries))
 
-(defn feed? [source]
-      (and source (parse-feed source)))
-
-(defn entries [source]
-  (if-let [synd-feed (parse-feed source)]
-    (seq (.getEntries synd-feed))))
-
-(defn body [e]
-  (let [d (.getDescription e)
-	c (first (seq (.getContents e)))]
-    (cond (not (or d c)) ""
-	  (not d) (.getValue c)
-	  (not c) (.getValue d)
-	  :else (max-by count
-			[(.getValue d) (.getValue c)]))))
-
-(defn entry-as-map [e]
-  (into {} (map #(if (nil? (second %)) [(first %) ""] %)
-                {:date (time-fmt/unparse (time-fmt/formatters :date-time)
-                                         (time-coerce/from-date (.getPublishedDate e)))
-                 :author (.getAuthor e)
-                 :title (.getTitle e)
-                 :link (.getLink e)
-                 :des (let [d (body e)]
-                        (if (empty? d) d
-                            (text-from-dom (dom d))))})))
+(defn feed? [item]
+  (and item
+       (let [feed (parse-feed item)]
+	 (:entries feed))))
 
 (defn links-from-entry [e]
- (url-seq (body e)))
-
-(defn text-content [v]
-(doto (SyndContentImpl.)
-		       (.setType com.sun.syndication.feed.atom.Content/TEXT)
-		       (.setValue v)))
+ (-> e :content url-seq))
 
 (defn map-to-entry [entry]
   (let [content-keys (difference
@@ -163,11 +178,11 @@ May not be a good idea for blogs that have many useful feeds, for example, for a
 	:when (url u)]
     u))
 
-(defn home-feed-outlinks
+(defn find-feed-outlinks
   "given the url of a blog's homepage, find the outlinks to feeds from the homepage."
-[u]
+  [b u]
   (let [outs (into #{}
-		   (find-outlinks (body-str u) u))
+		   (find-outlinks b u))
 	feeds (filter
 	       identity
 	       (canonical-feeds outs))
@@ -176,25 +191,16 @@ May not be a good idea for blogs that have many useful feeds, for example, for a
 				   feeds))]
     (seq ex-feeds)))
 
-;;;map of feed home -> rss url
-;;    (zipmap (map #(feed-home (url %)) ex-feeds) ex-feeds)))
+(defn home-feed-outlinks
+[u]
+  (find-feed-outlinks (body-str u) u))
 
 (defn entry-feed-outlinks
   "given the url of a blog's feed, find the outlinks to feeds from all the entries currently in this blog's feed."
-[u]
+  [u]
   (let [home (feed-home (url u))
-	outs (into #{}
-		   (flatten
-		    (map
-		     #(find-outlinks (body %) home)
-		     (entries (url u)))))
-	feeds (filter
-	       identity
-	       (canonical-feeds outs))
-	;;we need to filter same host feeds again, as they can get filtered from outlinsk but then be found again when extracting canonical feeds.
-	ex-feeds (into #{} (filter #(external? (url u) (url %))
-				   feeds))]
-    (seq ex-feeds)))
+	uber-b (apply str (entries (url u)))]
+    (find-feed-outlinks uber-b u)))
 
 (defn feed-outlinks
   "given the url of a blog's homepage or rss feed, find the outlinks to feeds from both the homepage, and all the entries currently in this blog's feed."

@@ -55,13 +55,26 @@
 
 (defn text-node? [node]
   (and node (= (.getNodeType node) Node/TEXT_NODE)))
-
-;;TODO: use maybes for this sort of thing.
-(defn href [n]
+        
+(defn attr [n a]
   (if-let [attrs (.getAttributes n)]
-    (if-let [the-href (.getNamedItem attrs "href")]
-      (.getValue the-href))))
+    (if-let [att (.getNamedItem attrs a)]
+      (.getValue att))))
+        
+(defn attr-map 
+  "returns node attributes as map of keyword attribute keys to str value"
+  [n]
+  (when-let [attrs (.getAttributes n)]
+       (into {}
+          (for [i (range (.getLength attrs))
+                :let [item (bean (.item attrs i))]]
+            [(-> item :name keyword) (:textContent item)]))))      
 
+(defn href [n] (attr n "href"))
+(defn src [n] (attr n "src"))
+(defn node-type [n] (attr n "type"))
+
+;;TODO: script thing still not working?
 (defn extract-text [n]
   (if (not (text-node? n))
     ""
@@ -76,16 +89,34 @@
    (count (divs (dom (:body (fetch (url \"http://ftalphaville.ft.com/\")))))) -> 199"
   [d #^String t]
   (let [shitty-data-structure (.getElementsByTagName d t)]
-    (for [i (range 0 (.getLength shitty-data-structure))]
-      (.item shitty-data-structure i))))
+    (filter identity
+	    (for [i (range 0 (.getLength shitty-data-structure))]
+	      (.item shitty-data-structure i)))))
+
+(defn strip-from-dom
+  [d es]
+  (doseq [e es]
+    (.removeChild (.getParentNode e) e))
+  (.normalize d)
+  d)
+
+(defn strip-tags [d & tags]
+  (if (or (not tags)
+	  (empty? tags))
+    d
+    (recur (strip-from-dom d (elements d (first tags)))
+	   (rest tags))))
+
+(defn strip-non-content [d]
+  (strip-tags d "script" "style"))
 
 (defn divs
   "gets the divs in a dom.
    (count (divs (dom (:body (fetch (url \"http://ftalphaville.ft.com/\")))))) -> 199"
   [d]
-  (elements "div"))
+  (elements d "div"))
 
-(defn anchors [d] (elements "a"))
+(defn anchors [d] (elements d "a"))
 
 (defn head [d]
   (.item
@@ -94,6 +125,13 @@
 
 (defn hrefs [es]
   (filter (comp not nil?) (map (comp url href) es)))
+
+(defn do-children [n f]
+  (if (not (.hasChildNodes n))
+    []
+    (let [children (.getChildNodes n)]
+      (doall (for [i (range 0 (.getLength children))]
+	       (f (.item children i)))))))
 
 (defn walk-dom
   "recursively walk the dom.
@@ -104,11 +142,7 @@
   [d visit combine]
   (let [extractor (fn extract [n]
                     (combine (visit n)
-                             (if (not (.hasChildNodes n))
-                               []
-                               (let [children (.getChildNodes n)]
-                                 (doall (for [i (range 0 (.getLength children))]
-                                   (extract (.item children i))))))))]
+			     (do-children n extract)))]
     (extractor d)))
 
 (defn text-from-dom
@@ -116,13 +150,19 @@
    inspired by: http://www.prasannatech.net/2009/02/convert-html-text-parser-java-api.html"
   [d]
   (walk-dom
-    d
-    extract-text
-    (fn [head tail]
-      (let [results (cons head (flatten tail))
-            buffer  (StringBuffer.)]
-        (doall (map #(.append buffer %) results))
-        (str buffer)))))
+   d
+   extract-text
+   (fn [head tail]
+     (let [results (cons head (flatten tail))
+	   buffer  (StringBuffer.)]
+       (doall (map #(.append buffer %) results))
+       (str buffer)))))
+
+;;TODO: WTF is up with the required calling of strip-non-content twice?
+;;something about the side effects happening in the stip tags or stip from dom fns?
+(defn clean-text [d]
+  (text-from-dom (strip-non-content
+		  (strip-non-content d))))
 
 ;;(hrefs (elements (head d) "link"))
 ;;(links-from-dom (head d))

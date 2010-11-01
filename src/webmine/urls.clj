@@ -80,6 +80,17 @@
    url)
    u))
 
+(defn expand-relative-urls [h xs]
+  (map 
+   (fn [x]
+     (let [u (:url x)]
+       (if (url u) x
+	   (let [expanded (str (host-url h) u)]
+	     (if (url expanded)
+	       (assoc x :url expanded)
+	       x)))))
+   xs))
+
 (defn unique-hosts
   "given a seq of links, return the unique list of expanded host urls."
   [us] 
@@ -118,3 +129,9 @@
    get the first member of each vector, whihc is the url."
   [t]
   (urls (map first (re-seq url-pattern t))))
+
+(defn remove-urls
+  [t]
+  (.replaceAll
+   (re-matcher url-pattern t)
+   ""))
