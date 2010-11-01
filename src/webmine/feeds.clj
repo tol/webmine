@@ -34,7 +34,6 @@
                                                    s)))
      :author (get-text :author)}))
 
-
 (defn parse-feed [source]
   "returns map representing feed. Supports keys
   :title Name of feed
