@@ -5,7 +5,9 @@
         webmine.core
         webmine.parser
         webmine.urls)
-  (:require [work.core :as work])
+  (:require [work.core :as work]
+            [clj-time.format :as time-fmt]
+            [clj-time.coerce :as time-coerce])
   (:import [com.sun.syndication.feed.synd
             SyndFeedImpl SyndEntryImpl SyndContentImpl]
            [com.sun.syndication.io
@@ -41,14 +43,15 @@
 			[(.getValue d) (.getValue c)]))))
 
 (defn entry-as-map [e]
-   (into {} (map #(if (nil? (second %)) [(first %) ""] %)
-   {:date (str (.getPublishedDate e))
-    :author (.getAuthor e)
-    :title (.getTitle e)
-    :link (.getLink e)
-    :des (let [d (body e)]
-	   (if (empty? d) d
-	       (text-from-dom (dom d))))})))
+  (into {} (map #(if (nil? (second %)) [(first %) ""] %)
+                {:date (time-fmt/unparse (time-fmt/formatters :date-time)
+                                         (time-coerce/from-date (.getPublishedDate e)))
+                 :author (.getAuthor e)
+                 :title (.getTitle e)
+                 :link (.getLink e)
+                 :des (let [d (body e)]
+                        (if (empty? d) d
+                            (text-from-dom (dom d))))})))
 
 (defn links-from-entry [e]
  (url-seq (body e)))
