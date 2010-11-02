@@ -19,7 +19,6 @@
            java.util.ArrayList
            java.io.InputStream))
 
-
 (defn- compact-date-time [s]
   (let [date-time
 	(first
@@ -32,19 +31,31 @@
 	   (vals time-fmt/formatters))))]
     (time-fmt/unparse (time-fmt/formatters :date-time) date-time)))
 
+(defn mk-des [entry]
+  (if (and (:des entry)
+	   (not (= (:des entry)
+		   (:content entry))))
+    entry
+;;TODO: keep formatting but not img tags for web client?
+    (let [d (text-from-dom
+	     (first (elements (dom (:content entry)) "p")))]
+      (assoc entry :des d))))
+
 (defn- item-node-to-entry [item]
   (let [item-root (zip/xml-zip item)
-	get-text (fn [k] (xml-zip/xml1-> item-root k xml-zip/text))]
+	get-text (fn [k] (xml-zip/xml1-> item-root k xml-zip/text))
+	entry
     {:title (get-text :title)
      :link (get-text :link)
-     :content  (apply max-key count
+     :content (apply max-key count
 		      (map get-text [:content :description :content:encoded]))
      :des (first (filter identity
 		  (map get-text [:description :content :content:encoded])))
      :date (first (for [k [:pubDate :date :updatedDate]
                         :let [s (get-text k)]
                         :when k] (compact-date-time s)))
-     :author (get-text :author)}))
+     :author (get-text :author)}]
+    (mk-des entry)))
 
 (defn- str-to-url [s]
   (if (string? s) (java.net.URL. s) s))

@@ -164,6 +164,17 @@
   (text-from-dom (strip-non-content
 		  (strip-non-content d))))
 
+(defn scrub-html
+  "takes a document map and a list of keys containing html strings.
+returns a map with the values at those keys scrubbed down to clean text."
+  [doc & keys]
+  (reduce (fn [d k]
+	    (assoc d k
+		   (or ((maybe-comp clean-text dom k) d)
+		       (k d))))
+	  doc
+	  keys))
+
 ;;(hrefs (elements (head d) "link"))
 ;;(links-from-dom (head d))
 (defn links-from-dom
