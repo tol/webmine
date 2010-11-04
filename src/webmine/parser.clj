@@ -127,7 +127,7 @@
   (filter (comp not nil?) (map (comp url href) es)))
 
 (defn do-children [n f]
-  (if (not (.hasChildNodes n))
+  (if (not (and n (.hasChildNodes n)))
     []
     (let [children (.getChildNodes n)]
       (doall (for [i (range 0 (.getLength children))]
