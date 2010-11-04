@@ -123,7 +123,7 @@
 
 (defn feed-home [source]
  (if-let [synd-feed (parse-feed source)]
-    (.getLink synd-feed)))
+    (:link synd-feed)))
 
 (defn external?
   "is the url from the same host as the home url?"
@@ -164,26 +164,53 @@
 ;;TODO: invert to make mroe efficient with and.
 ;;also could invert conditional to be only .xml, /, or nothing
 (defn rss-suffix? [u]
-  (let [su (str u)
-	l (.length su)
-	drop (= "/" (.charAt su (- l 1)))
-	u* (if (not drop) su (subs su 0 (- l 1)))]
-	(not (or (.endsWith u* ".com")
-	    (.endsWith u* ".html")
-	    (.endsWith u* ".php")
-	    (.endsWith u* ".png")
-	    (.endsWith u* ".ico")
-	    (.endsWith u* ".txt")
-	    (.endsWith u* ".txt")))))
+  (let [u (str u)]
+    (or (.contains u "xml")
+	(.contains u "rss")
+	(.contains u "atom")
+	#_(.matches u "^.*/[^/.]*$"))))
+;; (let [su (str u)
+;; 	l (.length su)
+;; 	drop (= "/" (.charAt su (- l 1)))
+;; 	u* (if (not drop) su (subs su 0 (- l 1)))]
+;; 	(not (or (.endsWith u* ".com")
+;; 	    (.endsWith u* ".html")
+;; 	    (.endsWith u* ".php")
+;; 	    (.endsWith u* ".png")
+;; 	    (.endsWith u* ".ico")
+;; 	    (.endsWith u* ".txt")
+;; 	    (.endsWith u* ".txt"))))
 
-(defn host-rss-feeds [page]
-  ;;most sites go with the standard that the rss or atom feed is in the head
-  (if-let [head-links ((maybe-comp links-from-dom head dom body-str) page)]
-    (seq (into #{}
-	       (filter #(and (not (comment? %))
-			     (rss-suffix? %)
-			     (feed? (url %)))
-		       head-links)))))
+(defn- fix-link
+  "fix absolute links"
+  [base #^String link]
+  (if (.startsWith link "/")
+    (str base link)
+    link))
+
+(defn host-rss-feeds
+  "checks head of page for rss feed links. Does two checks, any links
+   that are marked as rss/xml/atom in the link type or if
+   any link has rss xml or  "
+  [page]
+  (let [d (-> page body-str dom head)]    
+    (into #{}	  
+	  (filter (comp feed? url)
+	   (concat
+	    (when-let [all-links (elements d "link")]
+	      (for [l all-links :let [attr (attr-map l)
+				      #^String type (:type attr)
+				      #^String link (->> attr :href (fix-link (str page)))]
+		    :when (and type
+			  (or (.contains type "rss") (.contains type "atom"))) ]
+		link))
+	    ;;most sites go with the standard that the rss or atom feed is in the head
+	    (when-let [head-links (links-from-dom d)]
+	      (filter #(and (not (comment? %))
+			    (rss-suffix? %))
+		      (map
+		       #(fix-link (str page) %)
+		       head-links))))))))
 
 (def canonical-feed (comp min-length host-rss-feeds))
 
@@ -245,6 +272,11 @@ May not be a good idea for blogs that have many useful feeds, for example, for a
 (comment
   (entries "http://www.rollingstone.com/siteServices/rss/allNews")
   (entries (java.net.URL. "http://www.rollingstone.com/siteServices/rss/allNews"))
+  (canonical-feed "http://www.rollingstone.com/")
+  (canonical-feed "http://techcrunch.com/2010/11/02/andreessen-horowitz-650m-fund/")
+  (canonical-feed "http://io9.com")
+  ; This one requires fix-link, otherwise doesn't work
+  (canonical-feed "http://npr.org")
 )
 
 
