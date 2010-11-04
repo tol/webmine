@@ -92,7 +92,7 @@
 			       (filter second
 				       (item-node-to-entry n)))]]
 	 entry))})
-    (catch Exception _ nil)))
+    (catch Exception e (.printStackTrace e) nil)))
 
 (defn entries
   "return seq of entries from rss feed source (must be File or URL).
@@ -196,7 +196,7 @@
 (defn- fix-link
   "fix absolute links"
   [base #^String link]
-  (if (.startsWith link "/")
+  (if (and link (.startsWith link "/"))
     (str base link)
     link))
 
@@ -205,24 +205,27 @@
    that are marked as rss/xml/atom in the link type or if
    any link has rss xml or  "
   [page]
-  (let [d (-> page body-str dom head)]    
+  (let [d (-> page body-str dom)]    
     (into #{}	  
-	  (filter (comp feed? url)
-	   (concat
-	    (when-let [all-links (elements d "link")]
-	      (for [l all-links :let [attr (attr-map l)
-				      #^String type (:type attr)
-				      #^String link (->> attr :href (fix-link (str page)))]
-		    :when (and type
-			  (or (.contains type "rss") (.contains type "atom"))) ]
-		link))
-	    ;;most sites go with the standard that the rss or atom feed is in the head
-	    (when-let [head-links (links-from-dom d)]
-	      (filter #(and (not (comment? %))
-			    (rss-suffix? %))
-		      (map
-		       #(fix-link (str page) %)
-		       head-links))))))))
+    (filter identity #_(comp feed? url)
+	    (concat
+	     ;; sometimes rss feeds are marked as
+	     ;; <link type="application/rss+xml">
+	     (when-let [all-links (elements d "link")]
+	       (for [l all-links
+		     :when l
+		     :let [attr (attr-map l)
+			   #^String type (:type attr)
+			   #^String link (->> attr :href (fix-link (str page)))]
+		     :when (and link
+			        type
+				(or (.contains type "rss") (.contains type "atom"))) ]
+		 link))
+	     ;;most sites go with the standard that the rss or atom feed is in the head
+	     (when-let [head-links (-> d head links-from-dom)]
+	       (->> head-links
+		    (map (partial fix-link (str page)))
+		    (filter #(and (not (comment? %)) (rss-suffix? %))))))))))
 
 (def canonical-feed (comp min-length host-rss-feeds))
 
@@ -286,9 +289,10 @@ May not be a good idea for blogs that have many useful feeds, for example, for a
   (entries (java.net.URL. "http://www.rollingstone.com/siteServices/rss/allNews"))
   (canonical-feed "http://www.rollingstone.com/")
   (canonical-feed "http://techcrunch.com/2010/11/02/andreessen-horowitz-650m-fund/")
-  (canonical-feed "http://io9.com")
   ; This one requires fix-link, otherwise doesn't work
   (canonical-feed "http://npr.org")
+  (canonical-feed "http://io9.com/")
+  (canonical-feed "http://www.huffingtonpost.com/")
 )
 
 
