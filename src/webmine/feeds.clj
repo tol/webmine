@@ -52,46 +52,60 @@
 	     (first (elements (dom (:content entry)) "p")))]
       (assoc entry :des d))))
 
+(defn- str-to-url [s]
+  (if (string? s) (java.net.URL. s) s))
+
+(defrecord Feed [title des link entries])
+
+(defrecord FeedEntry [title link content des date author])
+
 (defn- item-node-to-entry [item]
   (let [item-root (zip/xml-zip item)
 	get-text (fn [k] (xml-zip/xml1-> item-root k xml-zip/text))
 	entry
-	{:title (get-text :title)
-	 :link (get-text :link)
-	 :content (apply max-key count
-			 (map get-text [:content :description :content:encoded]))
-	 :des (first (filter identity
+	(FeedEntry.
+	   ; title
+	   (get-text :title)
+	   ; link
+	   (get-text :link)
+	   ; content
+	   (apply max-key count
+		  (map get-text [:content :description :content:encoded]))
+	   ; des
+	   (first (filter identity
 			     (map get-text [:description :content :content:encoded])))
-	 :date (try (first (for [k [:pubDate :date :updatedDate]
+	   ; date
+	   (try (first (for [k [:pubDate :date :updatedDate]
 				 :let [s (get-text k)]
 				 :when k] (if s (compact-date-time s)
 					      nil)))
-		    (catch Exception e (log/error e)))
-	 :author (get-text :author)}]
+		(catch Exception e (log/error e)))
+	   ; author
+	   (get-text :author))]
     (mk-des entry)))
 
-(defn- str-to-url [s]
-  (if (string? s) (java.net.URL. s) s))
-
 (defn parse-feed [source]
-  "returns map representing feed. Supports keys
+  "returns record Feed representing a snapshot of a feed. Supports keys
   :title Name of feed
   :des Description of feed
   :link link to feed
-  :entries seq of entries, see doc below for entries"
+  :entries seq of Entry records, see doc below for entries"
   (try
     (when-let [root (-> source str-to-url input-stream parse zip/xml-zip)]
-     {:title (xml-zip/xml1-> root :channel :title xml-zip/text)
-      :des   (xml-zip/xml1-> root :channel :description xml-zip/text)
-      :link  (xml-zip/xml1-> root :channel :link xml-zip/text)
-      :entries
-      (doall
-       (for [n (xml-zip/xml-> root 
-			      :channel :item zip/node)
-	     :let [entry (into {}
-			       (filter second
-				       (item-node-to-entry n)))]]
-	 entry))})
+      (Feed.
+         ; title
+         (xml-zip/xml1-> root :channel :title xml-zip/text)
+	 ; desc (cription)
+         (xml-zip/xml1-> root :channel :description xml-zip/text)
+	 ; link
+	 (xml-zip/xml1-> root :channel :link xml-zip/text)
+	 ; entries
+	 (doall
+	   (for [n (xml-zip/xml-> root :channel :item zip/node)
+		 :let [entry (into {}
+				 (filter second
+					 (item-node-to-entry n)))]]
+	   entry))))
     (catch Exception e (.printStackTrace e) nil)))
 
 (defn entries
