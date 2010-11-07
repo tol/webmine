@@ -103,26 +103,34 @@
 (max-by (comp count :textContent bean) (extract-all d)))
 
 (defn best-img
-  ([u] (best-img readability-div u))
-  ([pick-div u ]
-     (let [d (dom (:body (cl/get u)))
-	   ;;first try to get the images out of the core body div.
-	   core-imgs (imgs (pick-div d))
-	   ;;if that we have core images, use those, if not, get all the images in the dom
-	   target-imgs (if (not (empty? core-imgs))
-			 core-imgs
-			 (imgs d))
-	   eis (expand-relative-urls u target-imgs)
-	   ;;ensure we have sizees for all images.
-	   sizes (fetch-sizes eis)]
-       (if (empty? sizes) nil
-	   ;;take the first image we find that has no follow image that is larger than twice it's size.
-	   (reduce (fn [best next]
-		     (if (> (img-area next)
-			    (* (img-area best) 2))
-		       next
-		       best))
-		   sizes)))))
+  [u content]
+  (let [d (dom content)
+	;;first try to get the images out of the core body div.
+	core-imgs (imgs (readability-div d))
+	;;if that we have core images, use those, if not, get all the images in the dom
+	target-imgs (if (not (empty? core-imgs))
+		      core-imgs
+		      (imgs d))
+	eis (expand-relative-urls u target-imgs)
+	;;ensure we have sizees for all images.
+	sizes (fetch-sizes eis)]
+    (if (empty? sizes) nil
+	;;take the first image we find that has no follow image that is larger than twice it's size.
+	(reduce (fn [best next]
+		  (if (> (img-area next)
+			 (* (img-area best) 2))
+		    next
+		    best))
+		sizes))))
+
+(defn best-img-at
+  [u]
+  (best-img u (:body (cl/get u))))
+
+(defn with-best-img [m url-key content-key]
+  (assoc m :img
+    (best-img (url-key m)
+	       (content-key m))))
 
 ;;gets a crane:
 ;;http://measuringmeasures.com/blog/2010/10/11/deploying-clojure-services-with-crane.html
