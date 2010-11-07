@@ -143,7 +143,14 @@
                        (re-matches #"display:\s*none;" (.toLowerCase style))))))
             (parser/divs root))]
     (parser/strip-from-dom root bad-divs)))
-  
+
+(defn readability-div
+  "given a dom, returns the best div."
+  [d]
+  (-> d
+      parser/strip-non-content
+      strip-bad-divs!
+      find-best-content-div))
 
 (comment 
   ;; THESE WORK
