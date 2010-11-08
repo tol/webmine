@@ -83,17 +83,17 @@
   :entries seq of entries, see doc below for entries"
   (try
     (when-let [root (-> source str-to-url input-stream parse zip/xml-zip)]
-     {:title (xml-zip/xml1-> root :channel :title xml-zip/text)
-      :des   (xml-zip/xml1-> root :channel :description xml-zip/text)
-      :link  (xml-zip/xml1-> root :channel :link xml-zip/text)
-      :entries
-      (doall
-       (for [n (xml-zip/xml-> root 
-			      :channel :item zip/node)
-	     :let [entry (into {}
-			       (filter second
-				       (item-node-to-entry n)))]]
-	 entry))})
+      (let [title (xml-zip/xml1-> root :channel :title xml-zip/text)
+            link (xml-zip/xml1-> root :channel :link xml-zip/text)]
+        {:title title
+         :des   (xml-zip/xml1-> root :channel :description xml-zip/text)
+         :link  link
+         :entries (doall
+                   (for [n (xml-zip/xml-> root 
+                                          :channel :item zip/node)
+                         :let [entry (into {} (filter second
+                                                      (item-node-to-entry n)))]]
+                     entry))}))
     (catch Exception e (.printStackTrace e) nil)))
 
 (defn entries
