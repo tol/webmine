@@ -22,20 +22,20 @@
   "html string -> dom using TagSoup.
    the features we set on the parser come from different implementations that I found in nutch, HtmlParser, as well as other parsers."
   (try
-  (let [result (org.apache.xalan.xsltc.trax.SAX2DOM.)
-        input (if (instance? java.net.URL source)
-                (.openStream source)
-                (StringReader. source))
-        parser (doto (Parser.)
-                 (.setContentHandler result)
-                 (.setFeature Parser/namespacesFeature false)
-                 (.setFeature Parser/namespacePrefixesFeature false)
-                 (.setFeature Parser/bogonsEmptyFeature false)
-                 (.setFeature Parser/ignoreBogonsFeature true)
-                 (.parse (InputSource. input)))]
-    (cast Document (.getDOM result)))
-  (catch org.w3c.dom.DOMException _ )
-  (catch java.io.IOException _ ))) ;;pushback buffer overflow
+    (let [result (org.apache.xalan.xsltc.trax.SAX2DOM.)
+          input (if (instance? java.net.URL source)
+                  (.openStream source)
+                  (StringReader. source))
+          parser (doto (Parser.)
+                   (.setContentHandler result)
+                   (.setFeature Parser/namespacesFeature false)
+                   (.setFeature Parser/namespacePrefixesFeature false)
+                   (.setFeature Parser/bogonsEmptyFeature false)
+                   (.setFeature Parser/ignoreBogonsFeature true)
+                   (.parse (InputSource. input)))]
+      (cast Document (.getDOM result)))
+    (catch org.w3c.dom.DOMException _ )
+    (catch java.io.IOException _ ))) ;;pushback buffer overflow
 
 ; const unsigned short  ELEMENT_NODE                   = 1;
 ; const unsigned short  ATTRIBUTE_NODE                 = 2;
