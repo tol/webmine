@@ -152,6 +152,15 @@
       strip-bad-divs!
       find-best-content-div))
 
+(defn extract-content [raw-html]
+  (-> raw-html
+      parser/dom
+      parser/strip-non-content
+      strip-bad-divs!
+      find-best-content-div
+      .getTextContent))    
+
+
 (comment 
   ;; THESE WORK
   "http://gigaom.com/2010/10/22/whos-driving-mobile-payments-hint-some-are-barely-old-enough-to-drive/"    

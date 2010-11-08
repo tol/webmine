@@ -306,6 +306,7 @@ May not be a good idea for blogs that have many useful feeds, for example, for a
   (canonical-feed "http://techcrunch.com/2010/11/02/andreessen-horowitz-650m-fund/")
   ; This one requires fix-link, otherwise doesn't work
   (canonical-feed "http://npr.org")
+  (entries "http://www.nytimes.com/services/xml/rss/nyt/HomePage.xml")
   (canonical-feed "http://io9.com/")
   (canonical-feed "http://www.huffingtonpost.com/")
 )
