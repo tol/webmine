@@ -5,6 +5,7 @@
   (:use
    infer.core
    webmine.urls
+   webmine.readability
    webmine.parser))
 
 ;;http://www.mkyong.com/regular-expressions/10-java-regular-expression-examples-you-should-know/
@@ -15,10 +16,25 @@
 (defn ints [xs]
   (map #(Integer/parseInt %) xs))
 
-(defn extract-hw
+(defn hw? [h w]
+  (and h w
+       (not (= "" h))
+       (not (= "" w))))
+
+(defn to-hw [h w] 
+    (if (hw? h w)
+      (ints [h w])
+      nil))
+
+(defn hw-from-style
   "in case hight and width are burried inside inline style tag."
-  [s]
-  (re-seq #"[0-9]+" s))
+  [st]
+  (let [[h w] (re-seq #"[0-9]+" (.getValue st))]
+    (to-hw h w)))
+
+(defn hw-from-tags [h w]
+  (to-hw (.getValue h)
+	 (.getValue w)))
 
 (defn img? [u]
   (or (.contains u ".jpg")
@@ -32,10 +48,12 @@
 (defn size [n]
   (if-let [attrs (.getAttributes n)]
     (let [w (.getNamedItem attrs "width")
-	  h (.getNamedItem attrs "height")]
-      (if (and w h) (ints [(.getValue h) (.getValue w)])
-	  (if-let [st (.getNamedItem attrs "style")]
-	    (ints (extract-hw (.getValue st))))))))
+	  h (.getNamedItem attrs "height")
+	  st (.getNamedItem attrs "style")]
+      (cond
+       (and w h) (hw-from-tags h w)
+       st (hw-from-style st)
+       :else nil))))
 
 (defn imgs [d] (map (fn [n]
 		      {:url (src n)
@@ -84,14 +102,15 @@
 (defn big-div [d]
 (max-by (comp count :textContent bean) (extract-all d)))
 
-(defn best-img [u]
-  (let [d (dom (:body (cl/get u)))
-  ;;first try to get the images out of the core body div.
-	core-imgs (imgs (big-div d))
+(defn best-img
+  [u content]
+  (let [d (dom content)
+	;;first try to get the images out of the core body div.
+	core-imgs (imgs (readability-div d))
 	;;if that we have core images, use those, if not, get all the images in the dom
 	target-imgs (if (not (empty? core-imgs))
-	       core-imgs
-	       (imgs d))
+		      core-imgs
+		      (imgs d))
 	eis (expand-relative-urls u target-imgs)
 	;;ensure we have sizees for all images.
 	sizes (fetch-sizes eis)]
@@ -104,6 +123,15 @@
 		    best))
 		sizes))))
 
+(defn best-img-at
+  [u]
+  (best-img u (:body (cl/get u))))
+
+(defn with-best-img [m url-key content-key]
+  (assoc m :img
+    (best-img (url-key m)
+	       (content-key m))))
+
 ;;gets a crane:
 ;;http://measuringmeasures.com/blog/2010/10/11/deploying-clojure-services-with-crane.html
 
@@ -115,3 +143,7 @@
 
 ;;rolling back to all images when there are none in the body.  image is also relative path to host.
 ;;http://daringfireball.net/2010/10/apple_no_longer_bundling_flash_with_mac_os_x
+
+;;trick outer div with bigger image for promotion.
+;;http://gigaom.com/2010/10/22/whos-driving-mobile-payments-hint-some-are-barely-old-enough-to-drive/
+;;http://gigaom.com/2010/10/23/latest-smartphones-reviewed-t-mobile-g2-nokia-n8/
