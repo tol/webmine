@@ -1,6 +1,6 @@
 # webmine
 
-A web mining toolkit for Clojure.
+A web mining toolkit for Clojure. A swiss army knife for processing text, images, and feeds from HTML. The goal is to give you the most common tools you need out of the box, but give you enough to customize your processing.
 
 ## link extraction and url fu
 
@@ -10,16 +10,16 @@ Get a seq of urls, or remove all urls, from an arbitrary string containing urls.
 
     (remove-urls raw-text)
 
-Expand a shortened url
+Expand a shortened url (e.g. from bitly)
 
     (expand short-url)
 
 
-## html parsing
+## HTML parsing
 
-Webmine wraps tagsoup for parsing.
+Webmine wraps [tagsoup](http://home.ccil.org/~cowan/XML/tagsoup/) for parsing; handles malformed HTML.
 
-You get a dom from a raw html string with:
+You get a dom tree from a raw html string with:
 
     (def d (dom source-string))
 
@@ -29,7 +29,15 @@ From there, you can do all sorts of things:
 
     (strip-non-content d)
 
+	(attr-map d)
+	
+	(links-from-dom d)
+
     (divs d)
+
+If you don't find what you need, you can write arbitrary transformation on the DOM tree using walk-dom
+
+	(walk-dom dom visit-node-fn accum-res-fn)
 
 ## feeds (rss/atom)
 
@@ -37,7 +45,7 @@ Get the current entries for a feed.
 
     (entries feed-url)
 
-Get the canonical rss/atom feeds from a given seq of urls.
+Identify the canonical rss/atom feeds from a given seq of urls. 
 
     (canonical-feeds feed-urls)
 
@@ -60,19 +68,24 @@ Get all the images and their sizes out of a dom.
 
     (def some-imgs (imgs d))
 
-Size fu checks attrs and style tags.  We can also fetch the images to get their dimesions if the attrs and style tags both fail.
+Size fu checks attrs and style tags for the most likely main image.  We can also fetch the images to get their dimensions if the attrs and style tags both fail.
 
     (fetch-sizes some-imgs)
 
 ## text and dom processing
 
-We have some dom scrubbing fu in webmine.readability based on readability.js.  We use it in webmine.images to find the best div to pick the most relevant image.
+We have dom scrubbing fu in webmine.readability based on readability.js. A nice feature of our readability port is that it's easy to change how a div is scored for readability to suit the data you're working with. webmine.readability is used in webmine.images to find the div most likely to contain the main page image:
 
-   (readability-div d)
+	(readability-div d)
 
 
 ## Installation
 
 For leiningen:
     ["webmine" "0.1.1"]
+
+
+## Authors
+
+Bradford Cross, Matt Revelle, and Aria Haghighi 
 
