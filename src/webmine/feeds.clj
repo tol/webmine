@@ -61,28 +61,29 @@
 
 (defn- item-node-to-entry [item]
   (let [item-root (zip/xml-zip item)
-	get-text (fn [k] (xml-zip/xml1-> item-root k xml-zip/text))
-	entry
-	(FeedEntry.
-	   ; title
-	   (get-text :title)
-	   ; link
-	   (get-text :link)
-	   ; content
-	   (apply max-key count
-		  (map get-text [:content :description :content:encoded]))
-	   ; des
-	   (first (filter identity
-			     (map get-text [:description :content :content:encoded])))
-	   ; date
-	   (try (first (for [k [:pubDate :date :updatedDate]
-				 :let [s (get-text k)]
-				 :when k] (if s (compact-date-time s)
-					      nil)))
-		(catch Exception e (log/error e)))
-	   ; author
-	   (get-text :author))]
-    (mk-des entry)))
+        get-text (fn [k] (xml-zip/xml1-> item-root k xml-zip/text))
+        entry (FeedEntry.
+               ;; title
+               (get-text :title)
+               ;; link
+               (get-text :link)
+               ;; content
+               (apply max-key count
+                      (map get-text [:content :description :content:encoded]))
+               ;; des
+               (first (filter identity
+                              (map get-text [:description :content :content:encoded])))
+               ;; date
+               (try (first (for [k [:pubDate :date :updatedDate]
+                                 :let [s (get-text k)]
+                                 :when k] (if s (compact-date-time s)
+                                              nil)))
+                    (catch Exception e (log/error e)))
+               ;; author
+               (get-text :author))]
+    (try (mk-des entry)
+         (catch Exception _
+           entry))))
 
 (defn parse-feed [source]
   "returns record Feed representing a snapshot of a feed. Supports keys
