@@ -82,7 +82,7 @@ We have dom scrubbing fu in webmine.readability based on readability.js. A nice 
 ## Installation
 
 For leiningen:
-    ["webmine" "0.1.1"]
+    [webmine "0.1.1"]
 
 ## Features In The Pipeline
 
