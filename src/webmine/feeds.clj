@@ -68,7 +68,9 @@
 					      nil)))
 		    (catch Exception e (log/error e)))
 	 :author (get-text :author)}]
-    (mk-des entry)))
+    (try (mk-des entry)
+         (catch Exception _
+           entry))))
 
 (defn- str-to-url [s]
   (if (string? s) (java.net.URL. s) s))
