@@ -1,6 +1,8 @@
 # webmine
 
-A web mining toolkit for Clojure. A swiss army knife for processing text, images, and feeds from HTML. The goal is to give you the most common tools you need out of the box, but give you enough to customize your processing.
+A web mining toolkit for Clojure. A swiss army knife for processing text, images, and feeds from HTML.
+
+The library gives you the most common tools you need out of the box, but give is fine grained enough to build your custom processing tools.
 
 ## link extraction and url fu
 
@@ -93,5 +95,7 @@ For leiningen:
 
 ## Authors
 
-Bradford Cross, Matt Revelle, and Aria Haghighi 
+- Copyright (c) Bradford Cross, Matt Revelle, and Aria Haghighi released under the MIT License (http://www.opensource.org/licenses/mit-license.php).
+
+ 
 
