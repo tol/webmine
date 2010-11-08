@@ -84,6 +84,12 @@ We have dom scrubbing fu in webmine.readability based on readability.js. A nice 
 For leiningen:
     ["webmine" "0.1.1"]
 
+## Features In The Pipeline
+
+- Lucene integration for search 
+- Better readability fu
+- Structured data extraction (e.g., HTML tables, lists mapped to clojure data structures)
+- Splog detection
 
 ## Authors
 
